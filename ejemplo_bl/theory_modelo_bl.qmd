@@ -1,0 +1,190 @@
+---
+title: "Modelo Black-Litterman: Explicación Paso a Paso"
+format:
+  html:
+    toc: true
+    theme: flatly
+    page-layout: full
+    number-sections: true
+---
+
+## Introducción
+
+El modelo Black-Litterman, desarrollado por Fischer Black y Robert Litterman en Goldman Sachs, es un enfoque para la construcción de carteras que combina:
+
+- Las expectativas del mercado (implícitas en una cartera de equilibrio, como el índice global).
+- Las opiniones del inversionista respecto a ciertos activos o combinaciones de activos.
+
+Este modelo resuelve algunas debilidades del modelo de media-varianza tradicional de Markowitz, especialmente en lo que se refiere a la sensibilidad de los pesos a pequeñas variaciones en los retornos esperados.
+
+## Supuestos y Notación
+
+Supongamos que se tiene un conjunto de $n$ activos. Las variables principales del modelo son:
+
+- $w_{mkt}$: vector de pesos de mercado (por ejemplo, MSCI ACWI).
+- $\Sigma$: matriz de varianza-covarianza de retornos.
+- $\lambda$: coeficiente de aversión al riesgo del mercado.
+- $\tau$: escalar que representa la incertidumbre sobre la estimación del retorno implícito.
+- $P$: matriz que define las vistas del inversionista.
+- $Q$: vector con los retornos esperados en esas vistas.
+- $\Omega$: matriz diagonal con la varianza de los errores en las vistas.
+
+## Estructura de Activos y Pesos de Mercado
+
+Se consideran las siguientes clases de activos:
+
+| Código   | Clase            | Región       | Peso Mercado ($w_{mkt}$) |
+|----------|------------------|--------------|---------------------------|
+| RF_D     | Renta Fija       | Desarrollada | 0.25                      |
+| RF_E     | Renta Fija       | Emergente    | 0.10                      |
+| RV_D     | Renta Variable   | Desarrollada | 0.30                      |
+| RV_E     | Renta Variable   | Emergente    | 0.15                      |
+| COM_E    | Commodities      | Energía      | 0.10                      |
+| COM_M    | Commodities      | Metales      | 0.10                      |
+
+La suma de los pesos de mercado es 1. Estos representan una cartera global diversificada.
+
+## Retornos Implícitos del Mercado
+
+El primer paso es obtener los **retornos implícitos** del mercado, definidos como:
+
+$$
+\pi = \lambda \cdot \Sigma \cdot w_{mkt}
+$$
+
+Este vector representa los retornos esperados consistentes con los pesos del portafolio de mercado bajo equilibrio.
+
+## Estimación de Retornos Implícitos
+
+Usamos los siguientes parámetros:
+
+- $\lambda = 2.5$: coeficiente de aversión al riesgo.
+- $\Sigma$: matriz de varianza-covarianza construida a partir de las siguientes volatilidades y correlaciones.
+
+### Volatilidades anuales (desviación estándar):
+
+| Activo | Volatilidad |
+|--------|-------------|
+| RF_D   | 0.04        |
+| RF_E   | 0.06        |
+| RV_D   | 0.15        |
+| RV_E   | 0.20        |
+| COM_E  | 0.18        |
+| COM_M  | 0.22        |
+
+### Matriz de correlación entre activos:
+
+|        | RF_D | RF_E | RV_D | RV_E | COM_E | COM_M |
+|--------|------|------|------|------|--------|--------|
+| RF_D   | 1.00 | 0.60 | 0.20 | 0.10 | 0.05   | 0.05   |
+| RF_E   | 0.60 | 1.00 | 0.25 | 0.15 | 0.10   | 0.10   |
+| RV_D   | 0.20 | 0.25 | 1.00 | 0.75 | 0.30   | 0.25   |
+| RV_E   | 0.10 | 0.15 | 0.75 | 1.00 | 0.35   | 0.30   |
+| COM_E  | 0.05 | 0.10 | 0.30 | 0.35 | 1.00   | 0.60   |
+| COM_M  | 0.05 | 0.10 | 0.25 | 0.30 | 0.60   | 1.00   |
+
+
+Con una matriz de correlaciones definida de forma empírica, se calcula $\Sigma$ como:
+
+$$
+\Sigma = D \cdot R \cdot D
+$$
+
+donde $D$ es la matriz diagonal de volatilidades, y $R$ la matriz de correlaciones.
+
+Luego, se obtienen los retornos implícitos del mercado:
+
+$$
+\pi = \lambda \cdot \Sigma \cdot w_{mkt}
+$$
+
+Esto da como resultado un vector de retornos consistentes con los pesos de mercado bajo equilibrio.
+
+## Incorporación de Opiniones (Vistas)
+
+Las opiniones del inversionista se representan como:
+
+- Una matriz $P$ de dimensiones $k \times n$, donde cada fila representa una vista.
+- Un vector $Q$ de dimensión $k$, donde cada elemento es el retorno esperado de la vista.
+- Una matriz de varianzas $\Omega$ (típicamente diagonal) que mide la confianza en cada vista.
+
+## Opiniones del Inversionista
+
+Se incorporan tres opiniones específicas:
+
+1. **RV_E (Renta Variable Emergente)** tendrá un rendimiento esperado de **12%**.
+2. **RF_E superará a RF_D** por **1.5%**.
+3. **COM_E superará a COM_M** por **1%**.
+
+Estas se expresan como:
+
+- Matriz $P$:
+
+$$
+P = \begin{bmatrix}
+0 & 0 & 0 & 1 & 0 & 0 \\
+-1 & 1 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 1 & -1 \\
+\end{bmatrix}
+$$
+
+- Vector $Q$:
+
+$$
+Q = \begin{bmatrix}
+0.12 \\
+0.015 \\
+0.01 \\
+\end{bmatrix}
+$$
+
+- Matriz $\Omega$ (confianza en cada opinión):
+
+$$
+\Omega = \begin{bmatrix}
+0.0005 & 0 & 0 \\
+0 & 0.0003 & 0 \\
+0 & 0 & 0.0004 \\
+\end{bmatrix}
+$$
+
+
+## Cálculo de Retornos Ajustados
+
+El retorno ajustado posterior (Black-Litterman) se calcula como:
+
+$$
+\mu_{BL} = \left[ (\tau \Sigma)^{-1} + P^\top \Omega^{-1} P \right]^{-1}
+\cdot \left[ (\tau \Sigma)^{-1} \pi + P^\top \Omega^{-1} Q \right]
+$$
+
+Donde usamos:
+
+- $\tau = 0.025$: representa la incertidumbre relativa en los retornos implícitos.
+
+El resultado es un vector de retornos esperados que combina equilibrio de mercado con opiniones subjetivas ponderadas según la confianza.
+
+## Construcción del Portafolio Óptimo
+
+Finalmente, el portafolio se optimiza con el retorno ajustado:
+
+$$
+w_{opt} = \frac{1}{\lambda} \Sigma^{-1} \mu_{BL}
+$$
+
+Con esto se obtiene una nueva asignación de pesos que refleja tanto las condiciones de mercado como las creencias del inversionista.
+
+## Resultados Esperados
+
+El modelo permite comparar:
+
+- Pesos del mercado vs pesos óptimos ajustados.
+- Retornos implícitos vs retornos ajustados por opiniones.
+
+Estas comparaciones permiten evaluar el impacto de nuestras creencias sobre la asignación de activos, manteniendo una coherencia con el riesgo y la estructura de correlación del mercado.
+
+## Comentarios Finales
+
+- El parámetro $\tau$ suele fijarse como un valor pequeño (ej., 0.025) y ajusta el impacto relativo del retorno implícito.
+- Cuando no hay opiniones ($P = 0$), se recuperan los retornos del mercado.
+- La flexibilidad del modelo lo hace útil para combinar datos históricos con juicios expertos.

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Modelo Black-Litterman: Explicación Paso a Paso</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="theory_modelo_bl_files/libs/clipboard/clipboard.min.js"></script>
+<script src="theory_modelo_bl_files/libs/quarto-html/quarto.js"></script>
+<script src="theory_modelo_bl_files/libs/quarto-html/popper.min.js"></script>
+<script src="theory_modelo_bl_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="theory_modelo_bl_files/libs/quarto-html/anchor.min.js"></script>
+<link href="theory_modelo_bl_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="theory_modelo_bl_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="theory_modelo_bl_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="theory_modelo_bl_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="theory_modelo_bl_files/libs/bootstrap/bootstrap-0b3b9638000aa634054a1a0e4b24ad6b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-full">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introducción" id="toc-introducción" class="nav-link active" data-scroll-target="#introducción"><span class="header-section-number">1</span> Introducción</a></li>
+  <li><a href="#supuestos-y-notación" id="toc-supuestos-y-notación" class="nav-link" data-scroll-target="#supuestos-y-notación"><span class="header-section-number">2</span> Supuestos y Notación</a></li>
+  <li><a href="#estructura-de-activos-y-pesos-de-mercado" id="toc-estructura-de-activos-y-pesos-de-mercado" class="nav-link" data-scroll-target="#estructura-de-activos-y-pesos-de-mercado"><span class="header-section-number">3</span> Estructura de Activos y Pesos de Mercado</a></li>
+  <li><a href="#retornos-implícitos-del-mercado" id="toc-retornos-implícitos-del-mercado" class="nav-link" data-scroll-target="#retornos-implícitos-del-mercado"><span class="header-section-number">4</span> Retornos Implícitos del Mercado</a></li>
+  <li><a href="#estimación-de-retornos-implícitos" id="toc-estimación-de-retornos-implícitos" class="nav-link" data-scroll-target="#estimación-de-retornos-implícitos"><span class="header-section-number">5</span> Estimación de Retornos Implícitos</a>
+  <ul class="collapse">
+  <li><a href="#volatilidades-anuales-desviación-estándar" id="toc-volatilidades-anuales-desviación-estándar" class="nav-link" data-scroll-target="#volatilidades-anuales-desviación-estándar"><span class="header-section-number">5.1</span> Volatilidades anuales (desviación estándar):</a></li>
+  <li><a href="#matriz-de-correlación-entre-activos" id="toc-matriz-de-correlación-entre-activos" class="nav-link" data-scroll-target="#matriz-de-correlación-entre-activos"><span class="header-section-number">5.2</span> Matriz de correlación entre activos:</a></li>
+  </ul></li>
+  <li><a href="#incorporación-de-opiniones-vistas" id="toc-incorporación-de-opiniones-vistas" class="nav-link" data-scroll-target="#incorporación-de-opiniones-vistas"><span class="header-section-number">6</span> Incorporación de Opiniones (Vistas)</a></li>
+  <li><a href="#opiniones-del-inversionista" id="toc-opiniones-del-inversionista" class="nav-link" data-scroll-target="#opiniones-del-inversionista"><span class="header-section-number">7</span> Opiniones del Inversionista</a></li>
+  <li><a href="#cálculo-de-retornos-ajustados" id="toc-cálculo-de-retornos-ajustados" class="nav-link" data-scroll-target="#cálculo-de-retornos-ajustados"><span class="header-section-number">8</span> Cálculo de Retornos Ajustados</a></li>
+  <li><a href="#construcción-del-portafolio-óptimo" id="toc-construcción-del-portafolio-óptimo" class="nav-link" data-scroll-target="#construcción-del-portafolio-óptimo"><span class="header-section-number">9</span> Construcción del Portafolio Óptimo</a></li>
+  <li><a href="#resultados-esperados" id="toc-resultados-esperados" class="nav-link" data-scroll-target="#resultados-esperados"><span class="header-section-number">10</span> Resultados Esperados</a></li>
+  <li><a href="#comentarios-finales" id="toc-comentarios-finales" class="nav-link" data-scroll-target="#comentarios-finales"><span class="header-section-number">11</span> Comentarios Finales</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content column-page-left" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Modelo Black-Litterman: Explicación Paso a Paso</h1>
+</div>
+
+
+
+<div class="quarto-title-meta column-page-left">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introducción" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="introducción"><span class="header-section-number">1</span> Introducción</h2>
+<p>El modelo Black-Litterman, desarrollado por Fischer Black y Robert Litterman en Goldman Sachs, es un enfoque para la construcción de carteras que combina:</p>
+<ul>
+<li>Las expectativas del mercado (implícitas en una cartera de equilibrio, como el índice global).</li>
+<li>Las opiniones del inversionista respecto a ciertos activos o combinaciones de activos.</li>
+</ul>
+<p>Este modelo resuelve algunas debilidades del modelo de media-varianza tradicional de Markowitz, especialmente en lo que se refiere a la sensibilidad de los pesos a pequeñas variaciones en los retornos esperados.</p>
+</section>
+<section id="supuestos-y-notación" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="supuestos-y-notación"><span class="header-section-number">2</span> Supuestos y Notación</h2>
+<p>Supongamos que se tiene un conjunto de <span class="math inline">\(n\)</span> activos. Las variables principales del modelo son:</p>
+<ul>
+<li><span class="math inline">\(w_{mkt}\)</span>: vector de pesos de mercado (por ejemplo, MSCI ACWI).</li>
+<li><span class="math inline">\(\Sigma\)</span>: matriz de varianza-covarianza de retornos.</li>
+<li><span class="math inline">\(\lambda\)</span>: coeficiente de aversión al riesgo del mercado.</li>
+<li><span class="math inline">\(\tau\)</span>: escalar que representa la incertidumbre sobre la estimación del retorno implícito.</li>
+<li><span class="math inline">\(P\)</span>: matriz que define las vistas del inversionista.</li>
+<li><span class="math inline">\(Q\)</span>: vector con los retornos esperados en esas vistas.</li>
+<li><span class="math inline">\(\Omega\)</span>: matriz diagonal con la varianza de los errores en las vistas.</li>
+</ul>
+</section>
+<section id="estructura-de-activos-y-pesos-de-mercado" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="estructura-de-activos-y-pesos-de-mercado"><span class="header-section-number">3</span> Estructura de Activos y Pesos de Mercado</h2>
+<p>Se consideran las siguientes clases de activos:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 26%">
+<col style="width: 20%">
+<col style="width: 39%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Código</th>
+<th>Clase</th>
+<th>Región</th>
+<th>Peso Mercado (<span class="math inline">\(w_{mkt}\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RF_D</td>
+<td>Renta Fija</td>
+<td>Desarrollada</td>
+<td>0.25</td>
+</tr>
+<tr class="even">
+<td>RF_E</td>
+<td>Renta Fija</td>
+<td>Emergente</td>
+<td>0.10</td>
+</tr>
+<tr class="odd">
+<td>RV_D</td>
+<td>Renta Variable</td>
+<td>Desarrollada</td>
+<td>0.30</td>
+</tr>
+<tr class="even">
+<td>RV_E</td>
+<td>Renta Variable</td>
+<td>Emergente</td>
+<td>0.15</td>
+</tr>
+<tr class="odd">
+<td>COM_E</td>
+<td>Commodities</td>
+<td>Energía</td>
+<td>0.10</td>
+</tr>
+<tr class="even">
+<td>COM_M</td>
+<td>Commodities</td>
+<td>Metales</td>
+<td>0.10</td>
+</tr>
+</tbody>
+</table>
+<p>La suma de los pesos de mercado es 1. Estos representan una cartera global diversificada.</p>
+</section>
+<section id="retornos-implícitos-del-mercado" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="retornos-implícitos-del-mercado"><span class="header-section-number">4</span> Retornos Implícitos del Mercado</h2>
+<p>El primer paso es obtener los <strong>retornos implícitos</strong> del mercado, definidos como:</p>
+<p><span class="math display">\[
+\pi = \lambda \cdot \Sigma \cdot w_{mkt}
+\]</span></p>
+<p>Este vector representa los retornos esperados consistentes con los pesos del portafolio de mercado bajo equilibrio.</p>
+</section>
+<section id="estimación-de-retornos-implícitos" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="estimación-de-retornos-implícitos"><span class="header-section-number">5</span> Estimación de Retornos Implícitos</h2>
+<p>Usamos los siguientes parámetros:</p>
+<ul>
+<li><span class="math inline">\(\lambda = 2.5\)</span>: coeficiente de aversión al riesgo.</li>
+<li><span class="math inline">\(\Sigma\)</span>: matriz de varianza-covarianza construida a partir de las siguientes volatilidades y correlaciones.</li>
+</ul>
+<section id="volatilidades-anuales-desviación-estándar" class="level3" data-number="5.1">
+<h3 data-number="5.1" class="anchored" data-anchor-id="volatilidades-anuales-desviación-estándar"><span class="header-section-number">5.1</span> Volatilidades anuales (desviación estándar):</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Activo</th>
+<th>Volatilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RF_D</td>
+<td>0.04</td>
+</tr>
+<tr class="even">
+<td>RF_E</td>
+<td>0.06</td>
+</tr>
+<tr class="odd">
+<td>RV_D</td>
+<td>0.15</td>
+</tr>
+<tr class="even">
+<td>RV_E</td>
+<td>0.20</td>
+</tr>
+<tr class="odd">
+<td>COM_E</td>
+<td>0.18</td>
+</tr>
+<tr class="even">
+<td>COM_M</td>
+<td>0.22</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="matriz-de-correlación-entre-activos" class="level3" data-number="5.2">
+<h3 data-number="5.2" class="anchored" data-anchor-id="matriz-de-correlación-entre-activos"><span class="header-section-number">5.2</span> Matriz de correlación entre activos:</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th>RF_D</th>
+<th>RF_E</th>
+<th>RV_D</th>
+<th>RV_E</th>
+<th>COM_E</th>
+<th>COM_M</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RF_D</td>
+<td>1.00</td>
+<td>0.60</td>
+<td>0.20</td>
+<td>0.10</td>
+<td>0.05</td>
+<td>0.05</td>
+</tr>
+<tr class="even">
+<td>RF_E</td>
+<td>0.60</td>
+<td>1.00</td>
+<td>0.25</td>
+<td>0.15</td>
+<td>0.10</td>
+<td>0.10</td>
+</tr>
+<tr class="odd">
+<td>RV_D</td>
+<td>0.20</td>
+<td>0.25</td>
+<td>1.00</td>
+<td>0.75</td>
+<td>0.30</td>
+<td>0.25</td>
+</tr>
+<tr class="even">
+<td>RV_E</td>
+<td>0.10</td>
+<td>0.15</td>
+<td>0.75</td>
+<td>1.00</td>
+<td>0.35</td>
+<td>0.30</td>
+</tr>
+<tr class="odd">
+<td>COM_E</td>
+<td>0.05</td>
+<td>0.10</td>
+<td>0.30</td>
+<td>0.35</td>
+<td>1.00</td>
+<td>0.60</td>
+</tr>
+<tr class="even">
+<td>COM_M</td>
+<td>0.05</td>
+<td>0.10</td>
+<td>0.25</td>
+<td>0.30</td>
+<td>0.60</td>
+<td>1.00</td>
+</tr>
+</tbody>
+</table>
+<p>Con una matriz de correlaciones definida de forma empírica, se calcula <span class="math inline">\(\Sigma\)</span> como:</p>
+<p><span class="math display">\[
+\Sigma = D \cdot R \cdot D
+\]</span></p>
+<p>donde <span class="math inline">\(D\)</span> es la matriz diagonal de volatilidades, y <span class="math inline">\(R\)</span> la matriz de correlaciones.</p>
+<p>Luego, se obtienen los retornos implícitos del mercado:</p>
+<p><span class="math display">\[
+\pi = \lambda \cdot \Sigma \cdot w_{mkt}
+\]</span></p>
+<p>Esto da como resultado un vector de retornos consistentes con los pesos de mercado bajo equilibrio.</p>
+</section>
+</section>
+<section id="incorporación-de-opiniones-vistas" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="incorporación-de-opiniones-vistas"><span class="header-section-number">6</span> Incorporación de Opiniones (Vistas)</h2>
+<p>Las opiniones del inversionista se representan como:</p>
+<ul>
+<li>Una matriz <span class="math inline">\(P\)</span> de dimensiones <span class="math inline">\(k \times n\)</span>, donde cada fila representa una vista.</li>
+<li>Un vector <span class="math inline">\(Q\)</span> de dimensión <span class="math inline">\(k\)</span>, donde cada elemento es el retorno esperado de la vista.</li>
+<li>Una matriz de varianzas <span class="math inline">\(\Omega\)</span> (típicamente diagonal) que mide la confianza en cada vista.</li>
+</ul>
+</section>
+<section id="opiniones-del-inversionista" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="opiniones-del-inversionista"><span class="header-section-number">7</span> Opiniones del Inversionista</h2>
+<p>Se incorporan tres opiniones específicas:</p>
+<ol type="1">
+<li><strong>RV_E (Renta Variable Emergente)</strong> tendrá un rendimiento esperado de <strong>12%</strong>.</li>
+<li><strong>RF_E superará a RF_D</strong> por <strong>1.5%</strong>.</li>
+<li><strong>COM_E superará a COM_M</strong> por <strong>1%</strong>.</li>
+</ol>
+<p>Estas se expresan como:</p>
+<ul>
+<li>Matriz <span class="math inline">\(P\)</span>:</li>
+</ul>
+<p><span class="math display">\[
+P = \begin{bmatrix}
+0 &amp; 0 &amp; 0 &amp; 1 &amp; 0 &amp; 0 \\
+-1 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\
+0 &amp; 0 &amp; 0 &amp; 0 &amp; 1 &amp; -1 \\
+\end{bmatrix}
+\]</span></p>
+<ul>
+<li>Vector <span class="math inline">\(Q\)</span>:</li>
+</ul>
+<p><span class="math display">\[
+Q = \begin{bmatrix}
+0.12 \\
+0.015 \\
+0.01 \\
+\end{bmatrix}
+\]</span></p>
+<ul>
+<li>Matriz <span class="math inline">\(\Omega\)</span> (confianza en cada opinión):</li>
+</ul>
+<p><span class="math display">\[
+\Omega = \begin{bmatrix}
+0.0005 &amp; 0 &amp; 0 \\
+0 &amp; 0.0003 &amp; 0 \\
+0 &amp; 0 &amp; 0.0004 \\
+\end{bmatrix}
+\]</span></p>
+</section>
+<section id="cálculo-de-retornos-ajustados" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="cálculo-de-retornos-ajustados"><span class="header-section-number">8</span> Cálculo de Retornos Ajustados</h2>
+<p>El retorno ajustado posterior (Black-Litterman) se calcula como:</p>
+<p><span class="math display">\[
+\mu_{BL} = \left[ (\tau \Sigma)^{-1} + P^\top \Omega^{-1} P \right]^{-1}
+\cdot \left[ (\tau \Sigma)^{-1} \pi + P^\top \Omega^{-1} Q \right]
+\]</span></p>
+<p>Donde usamos:</p>
+<ul>
+<li><span class="math inline">\(\tau = 0.025\)</span>: representa la incertidumbre relativa en los retornos implícitos.</li>
+</ul>
+<p>El resultado es un vector de retornos esperados que combina equilibrio de mercado con opiniones subjetivas ponderadas según la confianza.</p>
+</section>
+<section id="construcción-del-portafolio-óptimo" class="level2" data-number="9">
+<h2 data-number="9" class="anchored" data-anchor-id="construcción-del-portafolio-óptimo"><span class="header-section-number">9</span> Construcción del Portafolio Óptimo</h2>
+<p>Finalmente, el portafolio se optimiza con el retorno ajustado:</p>
+<p><span class="math display">\[
+w_{opt} = \frac{1}{\lambda} \Sigma^{-1} \mu_{BL}
+\]</span></p>
+<p>Con esto se obtiene una nueva asignación de pesos que refleja tanto las condiciones de mercado como las creencias del inversionista.</p>
+</section>
+<section id="resultados-esperados" class="level2" data-number="10">
+<h2 data-number="10" class="anchored" data-anchor-id="resultados-esperados"><span class="header-section-number">10</span> Resultados Esperados</h2>
+<p>El modelo permite comparar:</p>
+<ul>
+<li>Pesos del mercado vs pesos óptimos ajustados.</li>
+<li>Retornos implícitos vs retornos ajustados por opiniones.</li>
+</ul>
+<p>Estas comparaciones permiten evaluar el impacto de nuestras creencias sobre la asignación de activos, manteniendo una coherencia con el riesgo y la estructura de correlación del mercado.</p>
+</section>
+<section id="comentarios-finales" class="level2" data-number="11">
+<h2 data-number="11" class="anchored" data-anchor-id="comentarios-finales"><span class="header-section-number">11</span> Comentarios Finales</h2>
+<ul>
+<li>El parámetro <span class="math inline">\(\tau\)</span> suele fijarse como un valor pequeño (ej., 0.025) y ajusta el impacto relativo del retorno implícito.</li>
+<li>Cuando no hay opiniones (<span class="math inline">\(P = 0\)</span>), se recuperan los retornos del mercado.</li>
+<li>La flexibilidad del modelo lo hace útil para combinar datos históricos con juicios expertos.</li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
