@@ -1,0 +1,155 @@
+---
+title: "Black-Litterman Shiny Dashboard"
+format:
+  html:
+    theme: flatly
+    page-layout: full
+    toc: true
+execute:
+  echo: true
+  warning: false
+runtime: shiny
+---
+
+```{r setup, echo=FALSE, message=FALSE}
+library(shiny)
+library(tidyverse)
+library(DT)
+library(quadprog)
+
+# Datos base
+w_mkt <- c(RF_D = 0.25, RF_E = 0.10, RV_D = 0.30, RV_E = 0.15, COM_E = 0.10, COM_M = 0.10)
+vol <- c(RF_D = 0.04, RF_E = 0.06, RV_D = 0.15, RV_E = 0.20, COM_E = 0.18, COM_M = 0.22)
+
+clase_activo <- tibble(
+  Activo = names(w_mkt),
+  Clase = c("Renta Fija", "Renta Fija", "Renta Variable", "Renta Variable", "Commodities", "Commodities")
+)
+
+cor_mat <- matrix(c(
+  1.00, 0.60, 0.20, 0.10, 0.05, 0.05,
+  0.60, 1.00, 0.25, 0.15, 0.10, 0.10,
+  0.20, 0.25, 1.00, 0.75, 0.30, 0.25,
+  0.10, 0.15, 0.75, 1.00, 0.35, 0.30,
+  0.05, 0.10, 0.30, 0.35, 1.00, 0.60,
+  0.05, 0.10, 0.25, 0.30, 0.60, 1.00
+), nrow = 6, byrow = TRUE)
+
+Sigma <- diag(vol) %*% cor_mat %*% diag(vol)
+colnames(Sigma) <- rownames(Sigma) <- names(w_mkt)
+
+```
+
+```{r, echo=FALSE}
+inputPanel(
+  selectInput("activo_individual", "Selecciona activo individual:",
+              choices = c("Todos", names(w_mkt)), selected = "Todos"),
+
+  selectInput("grupo_activo", "Selecciona clase de activos:",
+              choices = c("Todos", unique(clase_activo$Clase)), selected = "Todos")
+)
+
+```
+
+
+```{r, echo=FALSE}
+renderPlot({
+  lambda <- 2.5
+  tau <- 0.025
+  pi <- lambda * Sigma %*% w_mkt
+
+  P <- matrix(c(
+    0, 0, 0, 1, 0, 0,
+   -1, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, -1
+  ), nrow = 3, byrow = TRUE)
+  Q <- matrix(c(0.12, 0.015, 0.01), ncol = 1)
+  Omega <- diag(c(0.0005, 0.0003, 0.0004))
+
+  inv_tauSigma <- solve(tau * Sigma)
+  middle <- solve(inv_tauSigma + t(P) %*% solve(Omega) %*% P)
+  mu_bl <- middle %*% (inv_tauSigma %*% pi + t(P) %*% solve(Omega) %*% Q)
+
+  Dmat <- 2 * Sigma
+  dvec <- as.numeric(mu_bl) / lambda
+  Amat <- cbind(rep(1, 6), diag(6))
+  bvec <- c(1, rep(0, 6))
+  sol <- solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
+  w_opt <- sol$solution
+  names(w_opt) <- names(w_mkt)
+
+  df <- tibble(
+    Activo = names(w_mkt),
+    Mercado = w_mkt,
+    Óptimo = w_opt,
+    Implícito = as.numeric(pi),
+    Ajustado = as.numeric(mu_bl)
+  ) %>% left_join(clase_activo, by = "Activo")
+
+  # Filtrar según input
+  # Filtrar según inputs
+  if (input$activo_individual != "Todos") {
+    df <- df %>% filter(Activo == input$activo_individual)
+  } else if (input$grupo_activo != "Todos") {
+    df <- df %>% filter(Clase == input$grupo_activo)
+  }
+
+
+  df %>%
+    pivot_longer(cols = c("Mercado", "Óptimo"), names_to = "Tipo", values_to = "Peso") %>%
+    ggplot(aes(x = Activo, y = Peso, fill = Tipo)) +
+    geom_col(position = "dodge") +
+    labs(title = "Pesos: Mercado vs Óptimo", y = "Peso", x = NULL) +
+    theme_minimal()
+})
+
+```
+
+
+```{r, echo=FALSE}
+renderDT({
+  lambda <- 2.5
+  tau <- 0.025
+  pi <- lambda * Sigma %*% w_mkt
+
+  P <- matrix(c(
+    0, 0, 0, 1, 0, 0,
+   -1, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, -1
+  ), nrow = 3, byrow = TRUE)
+  Q <- matrix(c(0.12, 0.015, 0.01), ncol = 1)
+  Omega <- diag(c(0.0005, 0.0003, 0.0004))
+
+  inv_tauSigma <- solve(tau * Sigma)
+  middle <- solve(inv_tauSigma + t(P) %*% solve(Omega) %*% P)
+  mu_bl <- middle %*% (inv_tauSigma %*% pi + t(P) %*% solve(Omega) %*% Q)
+
+  Dmat <- 2 * Sigma
+  dvec <- as.numeric(mu_bl) / lambda
+  Amat <- cbind(rep(1, 6), diag(6))
+  bvec <- c(1, rep(0, 6))
+  sol <- solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
+  w_opt <- sol$solution
+  names(w_opt) <- names(w_mkt)
+
+  df <- tibble(
+    Activo = names(w_mkt),
+    `Peso Mercado` = round(w_mkt, 3),
+    `Peso Óptimo` = round(w_opt, 3),
+    `Rend. Implícito` = round(as.numeric(pi), 3),
+    `Rend. Ajustado` = round(as.numeric(mu_bl), 3)
+  ) %>% left_join(clase_activo, by = "Activo")
+
+  # Filtrar según inputs
+  if (input$activo_individual != "Todos") {
+    df <- df %>% filter(Activo == input$activo_individual)
+  } else if (input$grupo_activo != "Todos") {
+    df <- df %>% filter(Clase == input$grupo_activo)
+  }
+
+
+  datatable(df, rownames = FALSE)
+})
+
+```
+
