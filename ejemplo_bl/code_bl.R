@@ -26,7 +26,9 @@ P <- matrix(c(
   -1, 1, 0, 0, 0, 0,     # RF_E - RF_D
   0, 0, 0, 0, 1, -1     # COM_E - COM_M
 ), nrow = 3, byrow = TRUE)
+
 Q <- matrix(c(0.12, 0.015, 0.01), ncol = 1)
+
 Omega <- diag(c(0.0005, 0.0003, 0.0004))
 
 inv_tauSigma <- solve(tau * Sigma)
@@ -44,4 +46,8 @@ sol <- solve.QP(Dmat, dvec, Amat, bvec, meq = 1)
 w_opt <- sol$solution
 names(w_opt) <- names(w_mkt)
 w_opt
+
+View(w_opt)
+
+View(w_mkt)
 
